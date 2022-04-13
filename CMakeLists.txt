@@ -280,9 +280,9 @@ if(BUILD_EXAMPLE_PROGRAMS)
         LINKER_LANGUAGE C
         COMPILE_FLAGS ${EXAMPLE_CFLAGS})
     if(BUILD_DYNAMIC_LIBS)
-        target_link_libraries(sio_microphone libsoundio_shared)
+        target_link_libraries(sio_microphone libsoundio_shared ${LIBM})
     else()
-        target_link_libraries(sio_microphone libsoundio_static ${LIBSOUNDIO_LIBS})
+        target_link_libraries(sio_microphone libsoundio_static ${LIBSOUNDIO_LIBS} ${LIBM})
     endif()
     install(TARGETS sio_microphone DESTINATION ${CMAKE_INSTALL_BINDIR})
 

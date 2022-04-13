@@ -73,6 +73,7 @@ static void write_callback(struct SoundIoOutStream *outstream, int frame_count_m
             break;
 
         const struct SoundIoChannelLayout *layout = &outstream->layout;
+        printf("channels: %d\n", layout->channel_count);
 
         double pitch = 440.0;
         double radians_per_second = pitch * 2.0 * PI;
@@ -208,6 +209,14 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+//   for (int i = 0; i < device->layout_count; i++) {
+//       printf("LISTING: ch: %d || name: %s\n", device->layouts[i].channel_count, device->layouts[i].name);
+//   }
+  const struct SoundIoChannelLayout *layout =
+      soundio_best_matching_channel_layout(
+          device->layouts, device->layout_count, device->layouts,
+          device->layout_count);
+
     struct SoundIoOutStream *outstream = soundio_outstream_create(device);
     if (!outstream) {
         fprintf(stderr, "out of memory\n");
@@ -219,6 +228,7 @@ int main(int argc, char **argv) {
     outstream->name = stream_name;
     outstream->software_latency = latency;
     outstream->sample_rate = sample_rate;
+    outstream->layout = *layout;
 
     if (soundio_device_supports_format(device, SoundIoFormatFloat32NE)) {
         outstream->format = SoundIoFormatFloat32NE;
@@ -241,6 +251,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "unable to open device: %s", soundio_strerror(err));
         return 1;
     }
+    printf("Layout: %s\n", outstream->layout.name);
 
     fprintf(stderr, "Software latency: %f\n", outstream->software_latency);
     fprintf(stderr,
