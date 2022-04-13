@@ -105,53 +105,7 @@ static void write_sine(struct SoundIoOutStream *outstream, int frame_max) {
 static void read_callback(struct SoundIoInStream *instream, int frame_count_min,
                           int frame_count_max) {
   return;
-  struct SoundIoChannelArea *areas;
-  int err;
-  char *write_ptr = soundio_ring_buffer_write_ptr(ring_buffer);
-  int free_bytes = soundio_ring_buffer_free_count(ring_buffer);
-  int free_frames_count = free_bytes / instream->bytes_per_frame;
 
-  if (frame_count_min > free_frames_count)
-    panic("ring buffer overflow");
-
-  int write_frames = min_int(free_frames_count, frame_count_max);
-  int frames_left = write_frames;
-
-  for (;;) {
-    int frame_count = frames_left;
-
-    if ((err = soundio_instream_begin_read(instream, &areas, &frame_count)))
-      panic("begin read error: %s", soundio_strerror(err));
-
-    if (!frame_count)
-      break;
-
-    if (!areas) {
-      // Due to an overflow there is a hole. Fill the ring buffer with
-      // silence for the size of the hole.
-      memset(write_ptr, 0, frame_count * instream->bytes_per_frame);
-      fprintf(stderr, "Dropped %d frames due to internal overflow\n",
-              frame_count);
-    } else {
-      for (int frame = 0; frame < frame_count; frame += 1) {
-        for (int ch = 0; ch < instream->layout.channel_count; ch += 1) {
-          memcpy(write_ptr, areas[ch].ptr, instream->bytes_per_sample);
-          areas[ch].ptr += areas[ch].step;
-          write_ptr += instream->bytes_per_sample;
-        }
-      }
-    }
-
-    if ((err = soundio_instream_end_read(instream)))
-      panic("end read error: %s", soundio_strerror(err));
-
-    frames_left -= frame_count;
-    if (frames_left <= 0)
-      break;
-  }
-
-  int advance_bytes = write_frames * instream->bytes_per_frame;
-  soundio_ring_buffer_advance_write_ptr(ring_buffer, advance_bytes);
 }
 
 static inline void write_callback(struct SoundIoOutStream *outstream,
@@ -167,7 +121,7 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
   //   printf("Hit write_sine: %d\n", frame_count_max);
 //   write_sine(outstream, frame_count_max);
 
-    printf("write callback: fill_count: %d, frame_count_min: %d\n", fill_count, frame_count_min);
+    printf("write callback: fill_count: %d, frame_count_max: %d\n", fill_count, frame_count_max);
   if (frame_count_min > fill_count) {
     // Ring buffer does not have enough data, fill with zeroes.
     frames_left = frame_count_min;
@@ -226,6 +180,7 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
     frames_left -= frame_count;
   }
 
+  printf("Advance buffer by %d\n", read_count * outstream->bytes_per_frame);
   soundio_ring_buffer_advance_read_ptr(ring_buffer,
                                        read_count * outstream->bytes_per_frame);
 }
@@ -489,15 +444,15 @@ int main(int argc, char **argv) {
 
 //   int capacity = microphone_latency * 2 * instream->sample_rate *
 //                  instream->bytes_per_frame;
-  int capacity = 300000;
+  int capacity = 3000000;
   ring_buffer = soundio_ring_buffer_create(soundio, capacity);
   if (!ring_buffer)
     panic("unable to create ring buffer: out of memory");
-  char *buf = soundio_ring_buffer_write_ptr(ring_buffer);
-  int fill_count =
-      microphone_latency * outstream->sample_rate * outstream->bytes_per_frame;
-  memset(buf, 0, fill_count);
-  soundio_ring_buffer_advance_write_ptr(ring_buffer, fill_count);
+//   char *buf = soundio_ring_buffer_write_ptr(ring_buffer);
+//   int fill_count =
+//       microphone_latency * outstream->sample_rate * outstream->bytes_per_frame;
+//   memset(buf, 0, fill_count);
+//   soundio_ring_buffer_advance_write_ptr(ring_buffer, fill_count);
 
   if ((err = soundio_instream_start(instream)))
     panic("unable to start input device: %s", soundio_strerror(err));
