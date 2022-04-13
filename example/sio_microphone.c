@@ -74,6 +74,7 @@ static void write_sine(struct SoundIoOutStream *outstream, int frame_max) {
   }
   int free_frames_count = free_bytes / BYTES_PER_FRAME;
   if (free_frames_count < frame_max) {
+      printf("Free bytes: %d, fre_frames_count: %d, frame_max: %d\n", free_bytes, free_frames_count, frame_max);
     panic("No space to write");
   }
     double float_sample_rate = outstream->sample_rate;
@@ -89,7 +90,7 @@ static void write_sine(struct SoundIoOutStream *outstream, int frame_max) {
     double sample = sin((seconds_offset + frame * seconds_per_frame) *
                           radians_per_second);
     // double sample = (frame % 3) - 1;
-    sample *= .1;
+    // sample *= .1;
     for (int channel = 0; channel < layout->channel_count; channel += 1) {
       write_sample_s32ne(write_ptr, sample);
     }
@@ -164,10 +165,9 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
   int fill_bytes = soundio_ring_buffer_fill_count(ring_buffer);
   int fill_count = fill_bytes / outstream->bytes_per_frame;
   //   printf("Hit write_sine: %d\n", frame_count_max);
-  write_sine(outstream, frame_count_max);
+//   write_sine(outstream, frame_count_max);
 
-  //   printf("write callback: fill_count: %d, frame_count_max: %d\n",
-  //   fill_count, frame_count_max);
+    printf("write callback: fill_count: %d, frame_count_min: %d\n", fill_count, frame_count_min);
   if (frame_count_min > fill_count) {
     // Ring buffer does not have enough data, fill with zeroes.
     frames_left = frame_count_min;
@@ -180,7 +180,7 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
         panic("begin write error: %s", soundio_strerror(err));
       if (frame_count <= 0)
         return;
-      printf("Write %d frames over %d channels\n", frame_count,
+      printf("Blank: Write %d frames over %d channels\n", frame_count,
              outstream->layout.channel_count);
       for (int frame = 0; frame < frame_count; frame += 1) {
         for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
@@ -210,6 +210,10 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
     for (int frame = 0; frame < frame_count; frame += 1) {
       for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
 
+        // int32_t *buf = (int32_t *)read_ptr;
+        // if (read_ptr != 0) {
+        //     printf("%0X ", *buf);
+        // }
         memcpy(areas[ch].ptr, read_ptr, outstream->bytes_per_sample);
         areas[ch].ptr += areas[ch].step;
         read_ptr += outstream->bytes_per_sample;
@@ -483,8 +487,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  int capacity = microphone_latency * 2 * instream->sample_rate *
-                 instream->bytes_per_frame;
+//   int capacity = microphone_latency * 2 * instream->sample_rate *
+//                  instream->bytes_per_frame;
+  int capacity = 300000;
   ring_buffer = soundio_ring_buffer_create(soundio, capacity);
   if (!ring_buffer)
     panic("unable to create ring buffer: out of memory");
@@ -508,7 +513,7 @@ int main(int argc, char **argv) {
     int c = getc(stdin);
     if (c == 'w') {
       printf("Writing sine\n");
-    //   write_sine(outstream, 14400);
+      write_sine(outstream, 48000);
     } else if (c == 'm') {
       make_sound = !make_sound;
     } else if (c == '\r' || c == '\n') {
