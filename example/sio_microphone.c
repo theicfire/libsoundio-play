@@ -57,7 +57,7 @@ static void write_sample_s32ne(char *ptr, double sample) {
   double range = (double)INT32_MAX - (double)INT32_MIN;
   double val = sample * range / 2.0;
   *buf = val;
-//   printf("WW: %f %0X ", sample, *buf);
+  //   printf("WW: %f %0X ", sample, *buf);
 }
 
 static void write_sine(struct SoundIoOutStream *outstream, int frame_max) {
@@ -74,21 +74,22 @@ static void write_sine(struct SoundIoOutStream *outstream, int frame_max) {
   }
   int free_frames_count = free_bytes / BYTES_PER_FRAME;
   if (free_frames_count < frame_max) {
-      printf("Free bytes: %d, fre_frames_count: %d, frame_max: %d\n", free_bytes, free_frames_count, frame_max);
+    printf("Free bytes: %d, fre_frames_count: %d, frame_max: %d\n", free_bytes,
+           free_frames_count, frame_max);
     panic("No space to write");
   }
-    double float_sample_rate = outstream->sample_rate;
-    double seconds_per_frame = 1.0 / float_sample_rate;
+  double float_sample_rate = outstream->sample_rate;
+  double seconds_per_frame = 1.0 / float_sample_rate;
   int frame_count = frame_max;
-    // double seconds_offset = 0.0;
+  // double seconds_offset = 0.0;
 
-    static const double PI = 3.14159265358979323846264338328;
-    double pitch = 440.0;
-    double radians_per_second = pitch * 2.0 * PI;
+  static const double PI = 3.14159265358979323846264338328;
+  double pitch = 440.0;
+  double radians_per_second = pitch * 2.0 * PI;
 
   for (int frame = 0; frame < frame_count; frame += 1) {
-    double sample = sin((seconds_offset + frame * seconds_per_frame) *
-                          radians_per_second);
+    double sample =
+        sin((seconds_offset + frame * seconds_per_frame) * radians_per_second);
     // double sample = (frame % 3) - 1;
     // sample *= .1;
     for (int channel = 0; channel < layout->channel_count; channel += 1) {
@@ -97,15 +98,14 @@ static void write_sine(struct SoundIoOutStream *outstream, int frame_max) {
     write_ptr += BYTES_PER_FRAME;
   }
 
-    seconds_offset =
-        fmod(seconds_offset + seconds_per_frame * frame_count, 1.0);
-    soundio_ring_buffer_advance_write_ptr(ring_buffer, BYTES_PER_FRAME * frame_count);
+  seconds_offset = fmod(seconds_offset + seconds_per_frame * frame_count, 1.0);
+  soundio_ring_buffer_advance_write_ptr(ring_buffer,
+                                        BYTES_PER_FRAME * frame_count);
 }
 
 static void read_callback(struct SoundIoInStream *instream, int frame_count_min,
                           int frame_count_max) {
   return;
-
 }
 
 static inline void write_callback(struct SoundIoOutStream *outstream,
@@ -119,34 +119,10 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
   int fill_bytes = soundio_ring_buffer_fill_count(ring_buffer);
   int fill_count = fill_bytes / outstream->bytes_per_frame;
   //   printf("Hit write_sine: %d\n", frame_count_max);
-//   write_sine(outstream, frame_count_max);
+  //   write_sine(outstream, frame_count_max);
 
-    printf("write callback: fill_count: %d, frame_count_max: %d\n", fill_count, frame_count_max);
-  if (frame_count_min > fill_count) {
-    // Ring buffer does not have enough data, fill with zeroes.
-    frames_left = frame_count_min;
-    for (;;) {
-      frame_count = frames_left;
-      if (frame_count <= 0)
-        return;
-      if ((err =
-               soundio_outstream_begin_write(outstream, &areas, &frame_count)))
-        panic("begin write error: %s", soundio_strerror(err));
-      if (frame_count <= 0)
-        return;
-      printf("Blank: Write %d frames over %d channels\n", frame_count,
-             outstream->layout.channel_count);
-      for (int frame = 0; frame < frame_count; frame += 1) {
-        for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-          memset(areas[ch].ptr, 0, outstream->bytes_per_sample);
-          areas[ch].ptr += areas[ch].step;
-        }
-      }
-      if ((err = soundio_outstream_end_write(outstream)))
-        panic("end write error: %s", soundio_strerror(err));
-      frames_left -= frame_count;
-    }
-  }
+  printf("write callback: fill_count: %d, frame_count_max: %d\n", fill_count,
+         frame_count_max);
 
   int read_count = min_int(frame_count_max, fill_count);
   frames_left = read_count;
@@ -160,7 +136,8 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
     if (frame_count <= 0)
       break;
 
-    printf("Write %d frames over %d channels\n", frame_count, outstream->layout.channel_count);
+    printf("Write %d frames over %d channels\n", frame_count,
+           outstream->layout.channel_count);
     for (int frame = 0; frame < frame_count; frame += 1) {
       for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
 
@@ -183,6 +160,32 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
   printf("Advance buffer by %d\n", read_count * outstream->bytes_per_frame);
   soundio_ring_buffer_advance_read_ptr(ring_buffer,
                                        read_count * outstream->bytes_per_frame);
+
+  if (frame_count_max > fill_count) {
+    // Need to fill the rest..
+    frames_left = frame_count_max - fill_count;
+    for (;;) {
+      frame_count = frames_left;
+      if (frame_count <= 0)
+        return;
+      if ((err =
+               soundio_outstream_begin_write(outstream, &areas, &frame_count)))
+        panic("begin write error: %s", soundio_strerror(err));
+      if (frame_count <= 0)
+        return;
+      printf("Blank: Write %d frames over %d channels\n", frame_count,
+             outstream->layout.channel_count);
+      for (int frame = 0; frame < frame_count; frame += 1) {
+        for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
+          memset(areas[ch].ptr, 0, outstream->bytes_per_sample);
+          areas[ch].ptr += areas[ch].step;
+        }
+      }
+      if ((err = soundio_outstream_end_write(outstream)))
+        panic("end write error: %s", soundio_strerror(err));
+      frames_left -= frame_count;
+    }
+  }
 }
 
 // static const double PI = 3.14159265358979323846264338328;
@@ -442,17 +445,18 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-//   int capacity = microphone_latency * 2 * instream->sample_rate *
-//                  instream->bytes_per_frame;
+  //   int capacity = microphone_latency * 2 * instream->sample_rate *
+  //                  instream->bytes_per_frame;
   int capacity = 3000000;
   ring_buffer = soundio_ring_buffer_create(soundio, capacity);
   if (!ring_buffer)
     panic("unable to create ring buffer: out of memory");
-//   char *buf = soundio_ring_buffer_write_ptr(ring_buffer);
-//   int fill_count =
-//       microphone_latency * outstream->sample_rate * outstream->bytes_per_frame;
-//   memset(buf, 0, fill_count);
-//   soundio_ring_buffer_advance_write_ptr(ring_buffer, fill_count);
+  //   char *buf = soundio_ring_buffer_write_ptr(ring_buffer);
+  //   int fill_count =
+  //       microphone_latency * outstream->sample_rate *
+  //       outstream->bytes_per_frame;
+  //   memset(buf, 0, fill_count);
+  //   soundio_ring_buffer_advance_write_ptr(ring_buffer, fill_count);
 
   if ((err = soundio_instream_start(instream)))
     panic("unable to start input device: %s", soundio_strerror(err));
@@ -469,6 +473,15 @@ int main(int argc, char **argv) {
     if (c == 'w') {
       printf("Writing sine\n");
       write_sine(outstream, 48000);
+    } else if (c == 'p') {
+      fprintf(stderr, "pausing result: %s\n",
+              soundio_strerror(soundio_outstream_pause(outstream, true)));
+    } else if (c == 'u') {
+      fprintf(stderr, "unpausing result: %s\n",
+              soundio_strerror(soundio_outstream_pause(outstream, false)));
+    } else if (c == 'c') {
+      fprintf(stderr, "clear buffer result: %s\n",
+              soundio_strerror(soundio_outstream_clear_buffer(outstream)));
     } else if (c == 'm') {
       make_sound = !make_sound;
     } else if (c == '\r' || c == '\n') {

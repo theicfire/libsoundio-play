@@ -621,6 +621,7 @@ static void playback_stream_underflow_callback(pa_stream *stream, void *userdata
 }
 
 static void playback_stream_write_callback(pa_stream *stream, size_t nbytes, void *userdata) {
+    printf("Write callback nbytes: %ld\n", nbytes);
     struct SoundIoOutStreamPrivate *os = (struct SoundIoOutStreamPrivate*)(userdata);
     struct SoundIoOutStream *outstream = &os->pub;
     int frame_count = nbytes / outstream->bytes_per_frame;
