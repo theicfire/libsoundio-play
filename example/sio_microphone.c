@@ -121,8 +121,8 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
   //   printf("Hit write_sine: %d\n", frame_count_max);
   //   write_sine(outstream, frame_count_max);
 
-  printf("write callback: fill_count: %d, frame_count_max: %d\n", fill_count,
-         frame_count_max);
+//   printf("write callback: fill_count: %d, frame_count_max: %d\n", fill_count,
+//          frame_count_max);
 
   int read_count = min_int(frame_count_max, fill_count);
   frames_left = read_count;
@@ -157,7 +157,7 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
     frames_left -= frame_count;
   }
 
-  printf("Advance buffer by %d\n", read_count * outstream->bytes_per_frame);
+//   printf("Advance buffer by %d\n", read_count * outstream->bytes_per_frame);
   soundio_ring_buffer_advance_read_ptr(ring_buffer,
                                        read_count * outstream->bytes_per_frame);
 
@@ -173,8 +173,8 @@ static inline void write_callback(struct SoundIoOutStream *outstream,
         panic("begin write error: %s", soundio_strerror(err));
       if (frame_count <= 0)
         return;
-      printf("Blank: Write %d frames over %d channels\n", frame_count,
-             outstream->layout.channel_count);
+    //   printf("Blank: Write %d frames over %d channels\n", frame_count,
+    //          outstream->layout.channel_count);
       for (int frame = 0; frame < frame_count; frame += 1) {
         for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
           memset(areas[ch].ptr, 0, outstream->bytes_per_sample);
